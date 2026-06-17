@@ -1,0 +1,134 @@
+/* ==========================================================================
+   THEME STYLES - FINTECH (DEFAULT)
+   ========================================================================== */
+
+/* Default / Light Mode */
+:root, :root[data-theme="light"] {
+  /* Color Palette */
+  --bg-app: #F9F9F8;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FBFBFA;
+  --bg-sidebar: #FFFFFF;
+  --bg-sidebar-active: #F2F2F0;
+  
+  --text-primary: #1F2937;    /* Slate/gray text */
+  --text-secondary: #4B5563;  /* Medium slate gray */
+  --text-muted: #8E939E;     /* Muted gray */
+  
+  --primary: #30575F;         /* Soft teal primary */
+  --primary-hover: #223F45;   /* Darker teal */
+  --primary-light: #EBF1F2;   /* Soft teal tint */
+  
+  --accent-blue: #5F97A6;     /* Muted blue analytics */
+  --accent-blue-light: #F0F6F7;
+  
+  --accent-gold: #D5AE40;     /* Gold KPI highlights */
+  --accent-gold-light: #FEF9EB;
+  
+  --accent-orange: #D75F14;   /* Alert/Pending orange */
+  --accent-orange-light: #FDF2EB;
+  
+  --color-success: #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-danger: #EF4444;
+  --color-danger-bg: #FEF2F2;
+
+  --border-primary: #E5E7EB;
+  --border-secondary: #F3F4F6;
+  
+  --input-bg: #FFFFFF;
+  --input-border: #D1D5DB;
+  --input-focus-ring: rgba(48, 87, 95, 0.15);
+
+  /* Elevation Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 12px -2px rgba(48, 87, 95, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 12px 24px -4px rgba(48, 87, 95, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 40px -8px rgba(48, 87, 95, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+
+  /* Border Radii */
+  --radius-factor: 1; /* Modifier for theme adjustments */
+  
+  /* Sidebar Width */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 80px;
+}
+
+/* Dark Mode Override */
+:root[data-theme="dark"] {
+  /* Color Palette */
+  --bg-app: #0B121A;
+  --bg-card: #131E2A;
+  --bg-card-hover: #172433;
+  --bg-sidebar: #0D1620;
+  --bg-sidebar-active: #1C2B3C;
+  
+  --text-primary: #E2E8F0;    /* Light slate gray */
+  --text-secondary: #94A3B8;  /* Muted slate text */
+  --text-muted: #64748B;     /* Dimmer text */
+  
+  --primary: #5F97A6;         /* Brightened soft teal for dark mode primary */
+  --primary-hover: #72ABB9;   /* Lighter teal */
+  --primary-light: rgba(95, 151, 166, 0.1); /* Soft teal tint */
+  
+  --accent-blue: #5F97A6;     /* Analytics blue */
+  --accent-blue-light: rgba(95, 151, 166, 0.08);
+  
+  --accent-gold: #D5AE40;     /* KPI Gold */
+  --accent-gold-light: rgba(213, 174, 64, 0.08);
+  
+  --accent-orange: #D75F14;   /* Alert orange */
+  --accent-orange-light: rgba(215, 95, 20, 0.08);
+  
+  --color-success: #10B981;
+  --color-success-bg: rgba(16, 185, 129, 0.08);
+  --color-danger: #EF4444;
+  --color-danger-bg: rgba(239, 68, 68, 0.08);
+
+  --border-primary: #1E2D3D;
+  --border-secondary: #162432;
+  
+  --input-bg: #0B121A;
+  --input-border: #1E2D3D;
+  --input-focus-ring: rgba(95, 151, 166, 0.25);
+
+  /* Elevation Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 16px 32px -4px rgba(0, 0, 0, 0.5), 0 4px 16px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 28px 56px -8px rgba(0, 0, 0, 0.6), 0 12px 24px -4px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   FUTURE THEME STYLE SCENARIOS (E.G. FUTURISTIC, CYBERPUNK)
+   ========================================================================== */
+
+/* Example Futuristic Cyberpunk theme switcher override */
+:root[data-style="cyberpunk"] {
+  --font-sans: 'Space Mono', 'Inter', monospace;
+  --radius-factor: 0; /* Fully sharp corners */
+  
+  /* Light Cyberpunk */
+  --bg-app: #FDFB42;
+  --bg-card: #FFFFFF;
+  --primary: #000000;
+  --text-primary: #000000;
+  --border-primary: #000000;
+  --shadow-md: 4px 4px 0px #000000;
+  --shadow-lg: 8px 8px 0px #000000;
+}
+
+:root[data-style="cyberpunk"][data-theme="dark"] {
+  /* Dark Cyberpunk */
+  --bg-app: #030303;
+  --bg-card: #121212;
+  --primary: #00FF66; /* Neon green */
+  --primary-hover: #33FF99;
+  --text-primary: #00FF66;
+  --text-secondary: #00CC55;
+  --border-primary: #00FF66;
+  --shadow-md: 4px 4px 0px rgba(0, 255, 102, 0.3);
+  --shadow-lg: 8px 8px 0px rgba(0, 255, 102, 0.5);
+  --color-success: #00FF66;
+  --color-danger: #FF0055;
+}
