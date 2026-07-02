@@ -16,6 +16,13 @@ const createVisitor = async (req, res) => {
 
     const visitorId = await generateVisitorId();
 
+    const registeredBy = {
+      id: req.admin._id,
+      name: req.admin.fullName || req.admin.email,
+      role: req.admin.role || 'admin',
+    };
+    const registeredAt = new Date();
+
     const visitor = await Visitor.create({
       visitorId,
       fullName,
@@ -24,7 +31,17 @@ const createVisitor = async (req, res) => {
       purposeOfVisit,
       personToMeet,
       status: status || 'pending',
+      registeredBy,
+      registeredAt,
     });
+
+    if (visitor.status === 'approved') {
+      visitor.approvedBy = registeredBy;
+      visitor.approvedAt = registeredAt;
+      visitor.checkedInBy = registeredBy;
+      visitor.checkedInAt = registeredAt;
+      await visitor.save();
+    }
 
     res.status(201).json({
       success: true,
@@ -102,21 +119,52 @@ const updateVisitor = async (req, res) => {
       });
     }
 
-    // Automatically set checkOutTime if status is updated to 'checked-out'
-    if (updateData.status === 'checked-out' && visitor.status !== 'checked-out') {
-      updateData.checkOutTime = new Date();
+    const activeUser = {
+      id: req.admin._id,
+      name: req.admin.fullName || req.admin.email,
+      role: req.admin.role || 'admin',
+    };
+    const now = new Date();
+
+    // Check status changes
+    if (updateData.status && updateData.status !== visitor.status) {
+      const oldStatus = visitor.status;
+      const newStatus = updateData.status;
+
+      if (newStatus === 'approved') {
+        visitor.approvedBy = activeUser;
+        visitor.approvedAt = now;
+        visitor.checkedInBy = activeUser;
+        visitor.checkedInAt = now;
+        visitor.status = 'approved';
+      } else if (newStatus === 'rejected') {
+        visitor.rejectedBy = activeUser;
+        visitor.rejectedAt = now;
+        visitor.status = 'rejected';
+      } else if (newStatus === 'checked-out') {
+        visitor.checkedOutBy = activeUser;
+        visitor.checkedOutAt = now;
+        visitor.checkOutTime = now;
+        visitor.status = 'checked-out';
+      } else {
+        visitor.status = newStatus;
+      }
     }
 
-    const updatedVisitor = await Visitor.findByIdAndUpdate(
-      visitor._id,
-      updateData,
-      { returnDocument: 'after', runValidators: true }
-    );
+    // Apply any other update fields
+    const allowedUpdates = ['fullName', 'phoneNumber', 'email', 'purposeOfVisit', 'personToMeet'];
+    allowedUpdates.forEach(field => {
+      if (updateData[field] !== undefined) {
+        visitor[field] = updateData[field];
+      }
+    });
+
+    await visitor.save();
 
     res.json({
       success: true,
       message: 'Visitor updated successfully',
-      visitor: updatedVisitor,
+      visitor,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

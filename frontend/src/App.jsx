@@ -9,11 +9,17 @@ import Profile from './pages/Profile';
 import DashboardLayout from './components/DashboardLayout';
 
 // Protected Route wrapper that injects DashboardLayout
-const ProtectedLayoutRoute = ({ element: Element }) => {
+const ProtectedLayoutRoute = ({ element: Element, allowedRoles }) => {
   const token = localStorage.getItem('adminToken');
   if (!token) {
     return <Navigate to="/login" replace />;
   }
+
+  const role = localStorage.getItem('userRole') || 'admin';
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <DashboardLayout>
       <Element />
@@ -35,7 +41,7 @@ function App() {
         />
         <Route 
           path="/register" 
-          element={<ProtectedLayoutRoute element={Register} />} 
+          element={<ProtectedLayoutRoute element={Register} allowedRoles={['admin', 'receptionist']} />} 
         />
         <Route 
           path="/visitors" 
@@ -43,7 +49,7 @@ function App() {
         />
         <Route 
           path="/roles" 
-          element={<ProtectedLayoutRoute element={Roles} />} 
+          element={<ProtectedLayoutRoute element={Roles} allowedRoles={['admin']} />} 
         />
         <Route 
           path="/profile" 

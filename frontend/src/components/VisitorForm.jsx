@@ -4,7 +4,7 @@ import api from '../api/api';
 const VisitorForm = ({ visitor, onSave, onClose }) => {
   const [formData, setFormData] = useState({
     fullName: '',
-    phoneNumber: '',
+    phoneNumber: '+91 ',
     email: '',
     purposeOfVisit: '',
     personToMeet: '',
@@ -21,17 +21,42 @@ const VisitorForm = ({ visitor, onSave, onClose }) => {
     if (visitor) {
       setFormData({
         fullName: visitor.fullName || '',
-        phoneNumber: visitor.phoneNumber || '',
+        phoneNumber: visitor.phoneNumber || '+91 ',
         email: visitor.email || '',
         purposeOfVisit: visitor.purposeOfVisit || '',
         personToMeet: visitor.personToMeet || '',
         status: visitor.status || 'pending',
+      });
+    } else {
+      setFormData({
+        fullName: '',
+        phoneNumber: '+91 ',
+        email: '',
+        purposeOfVisit: '',
+        personToMeet: '',
+        status: 'pending',
       });
     }
   }, [visitor]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'phoneNumber') {
+      if (!value.startsWith('+91')) {
+        if (/^\d+$/.test(value)) {
+          setFormData((prev) => ({
+            ...prev,
+            phoneNumber: '+91 ' + value,
+          }));
+          return;
+        }
+        setFormData((prev) => ({
+          ...prev,
+          phoneNumber: '+91 ',
+        }));
+        return;
+      }
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -51,15 +76,42 @@ const VisitorForm = ({ visitor, onSave, onClose }) => {
       return;
     }
 
+    // Indian Phone number validation: Starts with +91, exactly 10 digits, numeric only after +91
+    const cleanedPhone = phoneNumber.trim();
+    if (!cleanedPhone.startsWith('+91')) {
+      setError('Phone number must start with +91.');
+      setLoading(false);
+      return;
+    }
+
+    const digitsPart = cleanedPhone.substring(3).replace(/\s/g, ''); // strip prefix and all spaces
+    if (!/^\d+$/.test(digitsPart)) {
+      setError('Phone number must contain numeric digits only after +91.');
+      setLoading(false);
+      return;
+    }
+
+    if (digitsPart.length !== 10) {
+      setError('Phone number must contain exactly 10 digits after the country code (+91).');
+      setLoading(false);
+      return;
+    }
+
+    const consistentPhone = `+91 ${digitsPart}`;
+    const payload = {
+      ...formData,
+      phoneNumber: consistentPhone
+    };
+
     try {
       if (isEditMode) {
-        const response = await api.put(`/visitor/${visitor._id || visitor.visitorId}`, formData);
+        const response = await api.put(`/visitor/${visitor._id || visitor.visitorId}`, payload);
         setSuccess('Visitor record updated successfully!');
         setTimeout(() => {
           onSave(response.data.visitor);
         }, 800);
       } else {
-        const response = await api.post('/visitor', formData);
+        const response = await api.post('/visitor', payload);
         setSuccess('Visitor registered successfully!');
         setTimeout(() => {
           onSave(response.data.visitor);
@@ -100,7 +152,7 @@ const VisitorForm = ({ visitor, onSave, onClose }) => {
             value={formData.phoneNumber}
             onChange={handleChange}
             className="form-control"
-            placeholder="e.g. +1 (555) 019-2834"
+            placeholder="+91 9876543210"
             required
             disabled={loading}
           />

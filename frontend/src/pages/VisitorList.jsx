@@ -5,6 +5,7 @@ import VisitorForm from '../components/VisitorForm';
 
 const VisitorList = () => {
   const [visitors, setVisitors] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [localSearch, setLocalSearch] = useState('');
@@ -37,6 +38,15 @@ const VisitorList = () => {
   };
 
   useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const res = await api.get('/admin/me');
+        setCurrentUser(res.data?.admin || null);
+      } catch (err) {
+        console.error('Failed to load user session info', err);
+      }
+    };
+    fetchUserData();
     fetchVisitors();
   }, [navigate]);
 
@@ -102,24 +112,59 @@ const VisitorList = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const formatDateTime = (dateStr) => {
+  const formatTimeOnly = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '-';
-    
-    const datePart = d.toLocaleDateString(undefined, { 
+    return isNaN(d.getTime()) ? '-' : d.toLocaleTimeString(undefined, { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const formatDateOnly = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? '-' : d.toLocaleDateString(undefined, { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
     });
-    
-    const timePart = d.toLocaleTimeString(undefined, { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-    
-    return `${datePart} ${timePart}`;
   };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? '-' : `${formatDateOnly(dateStr)} • ${formatTimeOnly(dateStr)}`;
+  };
+
+  const getAuditInfo = (auditObj, timestamp) => {
+    if (auditObj && auditObj.name) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', gap: '8px' }}>
+          <div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)', marginTop: '2px' }}>
+              {auditObj.name} <span style={{ color: 'var(--primary)', fontWeight: 'var(--weight-medium)' }}>({auditObj.role || 'User'})</span>
+            </div>
+          </div>
+          {timestamp && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'right', flexShrink: 0 }}>
+              {formatDateTime(timestamp)}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>
+        Not Available
+      </div>
+    );
+  };
+
+  const canRegister = currentUser?.role === 'admin' || currentUser?.role === 'receptionist';
+  const canVerify = currentUser?.role === 'admin' || currentUser?.role === 'security';
+  const canEditInfo = currentUser?.role === 'admin' || currentUser?.role === 'receptionist';
+  const canDeleteInfo = currentUser?.role === 'admin';
 
   return (
     <div style={{ animation: 'fadeIn var(--transition-normal) ease-out' }}>
@@ -138,13 +183,15 @@ const VisitorList = () => {
             Browse, search, and manage statuses for all visitor registrations.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Register Visitor
-        </button>
+        {canRegister && (
+          <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Register Visitor
+          </button>
+        )}
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
@@ -207,13 +254,12 @@ const VisitorList = () => {
               <thead>
                 <tr>
                   <th>Visitor ID</th>
-                  <th>Full Name</th>
-                  <th>Phone Number</th>
-                  <th>Email</th>
-                  <th>Purpose</th>
-                  <th>Person To Meet</th>
+                  <th>Visitor Name</th>
                   <th>Status</th>
-                  <th>Created Date</th>
+                  <th>Check-In Time</th>
+                  <th>Check-Out Time</th>
+                  <th>Date</th>
+                  <th>Activity History</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -224,44 +270,59 @@ const VisitorList = () => {
                     <td>
                       <div style={{ fontWeight: 'var(--weight-semibold)' }}>{v.fullName}</div>
                     </td>
-                    <td>{v.phoneNumber}</td>
-                    <td>{v.email || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>-</span>}</td>
-                    <td>{v.purposeOfVisit}</td>
-                    <td>{v.personToMeet}</td>
                     <td>
-                      <select
-                        value={v.status}
-                        onChange={(e) => handleStatusUpdate(v._id || v.visitorId, e.target.value)}
-                        className={`status-select status-select-${v.status}`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="checked-out">Checked-Out</option>
-                      </select>
+                      {canVerify ? (
+                        <select
+                          value={v.status}
+                          onChange={(e) => handleStatusUpdate(v._id || v.visitorId, e.target.value)}
+                          className={`status-select status-select-${v.status}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="approved">Approved</option>
+                          <option value="rejected">Rejected</option>
+                          <option value="checked-out">Checked-Out</option>
+                        </select>
+                      ) : (
+                        <span className={`badge badge-${v.status}`}>
+                          {v.status}
+                        </span>
+                      )}
                     </td>
-                    <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      {formatDateTime(v.createdAt)}
+                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                      {formatTimeOnly(v.checkInTime)}
+                    </td>
+                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                      {formatTimeOnly(v.checkOutTime)}
+                    </td>
+                    <td style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                      {formatDateOnly(v.createdAt || v.checkInTime)}
+                    </td>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {v.lastUpdatedBy ? `Updated by ${v.lastUpdatedBy}` : 'Initial check-in'}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 'var(--space-15)', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <button
-                          onClick={() => handleStatusUpdate(v._id || v.visitorId, 'approved')}
-                          className="btn btn-success btn-sm"
-                          disabled={v.status === 'approved'}
-                          title="Approve Visit"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleStatusUpdate(v._id || v.visitorId, 'rejected')}
-                          className="btn btn-outline btn-sm"
-                          style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}
-                          disabled={v.status === 'rejected'}
-                          title="Reject Visit"
-                        >
-                          Reject
-                        </button>
+                        {canVerify && (
+                          <>
+                            <button
+                              onClick={() => handleStatusUpdate(v._id || v.visitorId, 'approved')}
+                              className="btn btn-success btn-sm"
+                              disabled={v.status === 'approved'}
+                              title="Approve Visit"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleStatusUpdate(v._id || v.visitorId, 'rejected')}
+                              className="btn btn-outline btn-sm"
+                              style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}
+                              disabled={v.status === 'rejected'}
+                              title="Reject Visit"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => setViewingVisitor(v)}
                           className="btn btn-outline btn-sm"
@@ -270,20 +331,24 @@ const VisitorList = () => {
                         >
                           Details
                         </button>
-                        <button
-                          onClick={() => setEditingVisitor(v)}
-                          className="btn btn-outline btn-sm"
-                          title="Edit Visitor Info"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(v._id || v.visitorId)}
-                          className="btn btn-danger btn-sm"
-                          title="Delete Record"
-                        >
-                          Delete
-                        </button>
+                        {canEditInfo && (
+                          <button
+                            onClick={() => setEditingVisitor(v)}
+                            className="btn btn-outline btn-sm"
+                            title="Edit Visitor Info"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        {canDeleteInfo && (
+                          <button
+                            onClick={() => handleDelete(v._id || v.visitorId)}
+                            className="btn btn-danger btn-sm"
+                            title="Delete Record"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -331,7 +396,7 @@ const VisitorList = () => {
         </div>
       )}
 
-      {/* Visitor Details Modal (Task 3) */}
+      {/* Visitor Details Modal */}
       {viewingVisitor && (
         <div className="modal-overlay" onClick={() => setViewingVisitor(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '550px' }}>
@@ -389,6 +454,59 @@ const VisitorList = () => {
                   <span style={{ fontSize: '0.7rem', fontWeight: 'var(--weight-bold)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Last Updated Date</span>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', marginTop: '4px', fontWeight: 'var(--weight-medium)' }}>
                     {formatDateTime(viewingVisitor.updatedAt || viewingVisitor.createdAt || viewingVisitor.checkInTime)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Activity History Section */}
+              <div style={{ 
+                borderTop: '1px solid var(--border-primary)', 
+                paddingTop: 'var(--space-4)', 
+                marginTop: 'var(--space-2)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)'
+              }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 'var(--weight-extrabold)', color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Activity History & Audit Trail
+                </span>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 'var(--space-4)', 
+                  backgroundColor: 'var(--input-bg)', 
+                  padding: 'var(--space-4)', 
+                  borderRadius: 'var(--radius-md)', 
+                  border: '1px solid var(--border-primary)'
+                }}>
+                  {/* Registered By */}
+                  <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border-secondary)', paddingBottom: 'var(--space-2)' }}>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase' }}>Registered By</div>
+                    {getAuditInfo(viewingVisitor?.registeredBy, viewingVisitor?.registeredAt || viewingVisitor?.createdAt)}
+                  </div>
+
+                  {/* Approved / Rejected By */}
+                  <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border-secondary)', paddingBottom: 'var(--space-2)' }}>
+                    <div style={{ fontSize: '0.725rem', color: viewingVisitor?.status === 'rejected' ? 'var(--color-danger)' : 'var(--color-success)', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                      {viewingVisitor?.status === 'rejected' ? 'Rejected By' : 'Approved By'}
+                    </div>
+                    {viewingVisitor?.status === 'rejected'
+                      ? getAuditInfo(viewingVisitor?.rejectedBy, viewingVisitor?.rejectedAt)
+                      : getAuditInfo(viewingVisitor?.approvedBy, viewingVisitor?.approvedAt)
+                    }
+                  </div>
+
+                  {/* Checked In By */}
+                  <div style={{ display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--border-secondary)', paddingBottom: 'var(--space-2)' }}>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Checked In By</div>
+                    {getAuditInfo(viewingVisitor?.checkedInBy, viewingVisitor?.checkedInAt || viewingVisitor?.checkInTime)}
+                  </div>
+
+                  {/* Checked Out By */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--color-success)', fontWeight: 'bold', textTransform: 'uppercase' }}>Checked Out By</div>
+                    {getAuditInfo(viewingVisitor?.checkedOutBy, viewingVisitor?.checkedOutAt || viewingVisitor?.checkOutTime)}
                   </div>
                 </div>
               </div>

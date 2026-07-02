@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const adminSchema = new mongoose.Schema(
   {
+    fullName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     email: {
       type: String,
       required: true,
@@ -15,7 +20,21 @@ const adminSchema = new mongoose.Schema(
     },
     role: {
       type: String,
+      enum: ['admin', 'receptionist', 'security'],
       default: 'admin',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    },
+    profilePicture: {
+      type: String,
+      default: '',
+    },
+    lastUpdatedBy: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }

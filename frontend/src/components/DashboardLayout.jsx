@@ -8,12 +8,33 @@ const DashboardLayout = ({ children }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   
   const navigate = useNavigate();
   const location = useLocation();
   
   const profileMenuRef = useRef(null);
   const notifMenuRef = useRef(null);
+
+  // Fetch current user details
+  const fetchMe = async () => {
+    try {
+      const response = await api.get('/admin/me');
+      if (response.data?.admin) {
+        setCurrentUser(response.data.admin);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user info', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMe();
+    window.addEventListener('profileUpdated', fetchMe);
+    return () => {
+      window.removeEventListener('profileUpdated', fetchMe);
+    };
+  }, []);
 
   // Sync theme with HTML attribute
   useEffect(() => {
@@ -81,6 +102,9 @@ const DashboardLayout = ({ children }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userFullName');
     navigate('/login');
   };
 
@@ -109,11 +133,11 @@ const DashboardLayout = ({ children }) => {
       case '/register':
         return 'Register Visitor';
       case '/visitors':
-        return 'Visitor List';
+        return 'Visitor Logs';
       case '/roles':
         return 'Roles & Permissions';
       case '/profile':
-        return 'Admin Profile';
+        return 'My Profile';
       default:
         return 'Smart Visitor Management';
     }
@@ -145,17 +169,19 @@ const DashboardLayout = ({ children }) => {
               {!collapsed && <span>Dashboard</span>}
             </NavLink>
           </li>
-          <li>
-            <NavLink to="/register" className={({ isActive }) => `sidebar-menu-item ${isActive ? 'active' : ''}`}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <line x1="20" y1="8" x2="20" y2="14" />
-                <line x1="23" y1="11" x2="17" y2="11" />
-              </svg>
-              {!collapsed && <span>Register Visitor</span>}
-            </NavLink>
-          </li>
+          {(currentUser?.role === 'admin' || currentUser?.role === 'receptionist' || localStorage.getItem('userRole') === 'admin' || localStorage.getItem('userRole') === 'receptionist') && (
+            <li>
+              <NavLink to="/register" className={({ isActive }) => `sidebar-menu-item ${isActive ? 'active' : ''}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <line x1="20" y1="8" x2="20" y2="14" />
+                  <line x1="23" y1="11" x2="17" y2="11" />
+                </svg>
+                {!collapsed && <span>Register Visitor</span>}
+              </NavLink>
+            </li>
+          )}
           <li>
             <NavLink to="/visitors" className={({ isActive }) => `sidebar-menu-item ${isActive ? 'active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -164,17 +190,19 @@ const DashboardLayout = ({ children }) => {
                 <line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              {!collapsed && <span>Visitor List</span>}
+              {!collapsed && <span>Visitor Logs</span>}
             </NavLink>
           </li>
-          <li>
-            <NavLink to="/roles" className={({ isActive }) => `sidebar-menu-item ${isActive ? 'active' : ''}`}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              {!collapsed && <span>Roles & Permissions</span>}
-            </NavLink>
-          </li>
+          {(currentUser?.role === 'admin' || localStorage.getItem('userRole') === 'admin') && (
+            <li>
+              <NavLink to="/roles" className={({ isActive }) => `sidebar-menu-item ${isActive ? 'active' : ''}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                {!collapsed && <span>Roles & Permissions</span>}
+              </NavLink>
+            </li>
+          )}
           <li>
             <NavLink to="/profile" className={({ isActive }) => `sidebar-menu-item ${isActive ? 'active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -300,38 +328,40 @@ const DashboardLayout = ({ children }) => {
             {/* Profile Menu */}
             <div style={{ position: 'relative' }} ref={profileMenuRef}>
               <div className="navbar-profile" onClick={() => setShowProfileMenu(!showProfileMenu)}>
-                <div className="profile-avatar">AD</div>
+                <div className="profile-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {currentUser?.profilePicture ? (
+                    <img 
+                      src={currentUser.profilePicture} 
+                      alt="Profile" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
+                  ) : (
+                    currentUser?.fullName 
+                      ? currentUser.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+                      : (currentUser?.email ? currentUser.email.slice(0, 2).toUpperCase() : 'AD')
+                  )}
+                </div>
                 <div className="profile-info">
-                  <span className="profile-name">Admin</span>
-                  <span className="profile-role">Control Panel</span>
+                  <span className="profile-name">
+                    {currentUser?.fullName || (currentUser?.email ? currentUser.email.split('@')[0] : 'Admin')}
+                  </span>
+                  <span className="profile-role" style={{ textTransform: 'capitalize' }}>
+                    {currentUser?.role || 'Control Panel'}
+                  </span>
                 </div>
               </div>
 
               {showProfileMenu && (
                 <div className="dropdown-menu">
-                  <div className="dropdown-header">System Admin</div>
+                  <div className="dropdown-header" style={{ textTransform: 'capitalize' }}>
+                    {currentUser?.fullName || 'System User'} ({currentUser?.role || 'Admin'})
+                  </div>
                   <div className="dropdown-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
                     <span>My Profile</span>
-                  </div>
-                  <div className="dropdown-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                      <line x1="16" y1="2" x2="16" y2="6" />
-                      <line x1="8" y1="2" x2="8" y2="6" />
-                      <line x1="3" y1="10" x2="21" y2="10" />
-                    </svg>
-                    <span>Account Details</span>
-                  </div>
-                  <div className="dropdown-item" onClick={() => { setShowProfileMenu(false); navigate('/profile'); }}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <span>Change Password</span>
                   </div>
                   <div className="dropdown-item" onClick={handleLogout} style={{ color: 'var(--color-danger)' }}>
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

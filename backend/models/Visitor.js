@@ -45,6 +45,48 @@ const visitorSchema = new mongoose.Schema(
       enum: ['pending', 'approved', 'rejected', 'checked-out'],
       default: 'pending',
     },
+    // Audit fields
+    registeredBy: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+      name: { type: String, default: '' },
+      role: { type: String, default: '' }
+    },
+    registeredAt: {
+      type: Date,
+      default: Date.now
+    },
+    approvedBy: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+      name: { type: String, default: '' },
+      role: { type: String, default: '' }
+    },
+    approvedAt: {
+      type: Date
+    },
+    rejectedBy: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+      name: { type: String, default: '' },
+      role: { type: String, default: '' }
+    },
+    rejectedAt: {
+      type: Date
+    },
+    checkedInBy: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+      name: { type: String, default: '' },
+      role: { type: String, default: '' }
+    },
+    checkedInAt: {
+      type: Date
+    },
+    checkedOutBy: {
+      id: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+      name: { type: String, default: '' },
+      role: { type: String, default: '' }
+    },
+    checkedOutAt: {
+      type: Date
+    },
   },
   { timestamps: true }
 );

@@ -57,15 +57,15 @@
 /* Dark Mode Override */
 :root[data-theme="dark"] {
   /* Color Palette */
-  --bg-app: #0B121A;
-  --bg-card: #131E2A;
-  --bg-card-hover: #172433;
-  --bg-sidebar: #0D1620;
-  --bg-sidebar-active: #1C2B3C;
+  --bg-app: #0A0A0A;
+  --bg-card: #171717;
+  --bg-card-hover: #1F1F1F;
+  --bg-sidebar: #111111;
+  --bg-sidebar-active: #1F1F1F;
   
-  --text-primary: #E2E8F0;    /* Light slate gray */
-  --text-secondary: #94A3B8;  /* Muted slate text */
-  --text-muted: #64748B;     /* Dimmer text */
+  --text-primary: #E5E5E5;    /* Premium light charcoal/gray text */
+  --text-secondary: #A3A3A3;  /* Medium gray text */
+  --text-muted: #737373;     /* Dimmer text */
   
   --primary: #5F97A6;         /* Brightened soft teal for dark mode primary */
   --primary-hover: #72ABB9;   /* Lighter teal */
@@ -85,18 +85,18 @@
   --color-danger: #EF4444;
   --color-danger-bg: rgba(239, 68, 68, 0.08);
 
-  --border-primary: #1E2D3D;
-  --border-secondary: #162432;
+  --border-primary: #262626;
+  --border-secondary: #1F1F1F;
   
-  --input-bg: #0B121A;
-  --input-border: #1E2D3D;
+  --input-bg: #111111;
+  --input-border: #262626;
   --input-focus-ring: rgba(95, 151, 166, 0.25);
 
   /* Elevation Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 16px 32px -4px rgba(0, 0, 0, 0.5), 0 4px 16px -2px rgba(0, 0, 0, 0.3);
-  --shadow-xl: 0 28px 56px -8px rgba(0, 0, 0, 0.6), 0 12px 24px -4px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.6), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 32px -4px rgba(0, 0, 0, 0.7), 0 4px 16px -2px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 28px 56px -8px rgba(0, 0, 0, 0.8), 0 12px 24px -4px rgba(0, 0, 0, 0.6);
 }
 
 /* ==========================================================================

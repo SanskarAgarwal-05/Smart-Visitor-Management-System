@@ -8,27 +8,37 @@ const AnalyticsCharts = ({ visitors = [] }) => {
   const getWeeklyTrend = () => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const counts = {};
+    const last7Days = [];
     
     // Initialize last 7 days
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dayName = days[d.getDay()];
-      counts[dayName] = { count: 0, dateLabel: d.toLocaleDateString([], { month: 'short', day: 'numeric' }) };
+      const dateStr = d.toDateString(); // exact date key e.g. "Thu Jun 24 2026"
+      const dateLabel = d.toLocaleDateString([], { month: 'short', day: 'numeric' }); // e.g. "Jun 24"
+      
+      counts[dateStr] = {
+        label: dayName,
+        dateLabel: dateLabel,
+        count: 0
+      };
+      last7Days.push(dateStr);
     }
 
     visitors.forEach(v => {
-      const checkIn = new Date(v.checkInTime);
-      const dayName = days[checkIn.getDay()];
-      if (counts[dayName]) {
-        counts[dayName].count += 1;
+      if (v.checkInTime) {
+        const checkInDateStr = new Date(v.checkInTime).toDateString();
+        if (counts[checkInDateStr] !== undefined) {
+          counts[checkInDateStr].count += 1;
+        }
       }
     });
 
-    return Object.keys(counts).map(day => ({
-      label: day,
-      value: counts[day].count,
-      date: counts[day].dateLabel
+    return last7Days.map(dateStr => ({
+      label: counts[dateStr].label,
+      value: counts[dateStr].count,
+      date: counts[dateStr].dateLabel
     }));
   };
 
@@ -89,11 +99,11 @@ const AnalyticsCharts = ({ visitors = [] }) => {
   });
 
   return (
-    <div className="analytics-grid" style={{ gridTemplateColumns: '1.8fr 1.2fr' }}>
+    <div className="analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 'var(--space-5)', marginBottom: 'var(--space-6)' }}>
       {/* LINE CHART: WEEKLY TRAFFIC */}
       <div className="card chart-card">
         <div className="chart-header">
-          <span className="chart-title">Visitors by Day (Weekly Trend)</span>
+          <span className="chart-title">Weekly Traffic (Daily Trend)</span>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Daily check-ins</span>
         </div>
         <div className="chart-container">
@@ -210,9 +220,9 @@ const AnalyticsCharts = ({ visitors = [] }) => {
       <div className="card chart-card">
         <div className="chart-header">
           <span className="chart-title">Status Distribution</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Real-time logs</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Real-time ratios</span>
         </div>
-        <div className="chart-container" style={{ minHeight: '200px', flexDirection: 'column' }}>
+        <div className="chart-container" style={{ minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ position: 'relative', width: '130px', height: '130px' }}>
             <svg viewBox="0 0 36 36" width="100%" height="100%">
               <circle 
@@ -278,7 +288,7 @@ const AnalyticsCharts = ({ visitors = [] }) => {
           </div>
 
           {/* Legends */}
-          <div className="chart-legend" style={{ marginTop: '15px' }}>
+          <div className="chart-legend" style={{ marginTop: '15px', display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {pieSegments.map((seg, idx) => (
               <div 
                 key={idx} 
@@ -286,11 +296,14 @@ const AnalyticsCharts = ({ visitors = [] }) => {
                 style={{ 
                   opacity: hoveredPie === null || hoveredPie === idx ? 1 : 0.4, 
                   transition: 'opacity 0.15s',
-                  fontSize: '0.75rem' 
+                  fontSize: '0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
                 }}
               >
-                <span className="legend-dot" style={{ backgroundColor: seg.color }} />
-                <span style={{ fontWeight: '600' }}>{seg.label}: {seg.count}</span>
+                <span className="legend-dot" style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: seg.color }} />
+                <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>{seg.label}: {seg.count}</span>
               </div>
             ))}
           </div>

@@ -31,8 +31,11 @@ const Login = () => {
     try {
       const response = await api.post('/admin/login', { email, password });
       
-      // Save token in localStorage
+      // Save details in localStorage
       localStorage.setItem('adminToken', response.data.token);
+      localStorage.setItem('userRole', response.data.admin.role || 'admin');
+      localStorage.setItem('userEmail', response.data.admin.email || '');
+      localStorage.setItem('userFullName', response.data.admin.fullName || '');
       
       // Redirect to dashboard
       navigate('/dashboard');
