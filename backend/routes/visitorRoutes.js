@@ -5,6 +5,7 @@ const {
   getVisitorById,
   updateVisitor,
   deleteVisitor,
+  dismissVisitorAlert,
 } = require('../controllers/visitorController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -17,6 +18,7 @@ router.post('/', createVisitor);
 router.get('/', getAllVisitors);
 router.get('/:id', getVisitorById);
 router.put('/:id', updateVisitor);
+router.put('/:id/dismiss-alert', dismissVisitorAlert);
 router.delete('/:id', deleteVisitor);
 
 module.exports = router;

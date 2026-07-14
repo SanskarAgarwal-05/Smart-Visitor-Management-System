@@ -32,6 +32,10 @@ const adminSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    visitorTimeLimit: {
+      type: Number,
+      default: 4,
+    },
     lastUpdatedBy: {
       type: String,
       default: null,

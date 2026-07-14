@@ -87,6 +87,29 @@ const visitorSchema = new mongoose.Schema(
     checkedOutAt: {
       type: Date
     },
+    isSuspicious: {
+      type: Boolean,
+      default: false
+    },
+    suspiciousAlerts: {
+      type: [String],
+      default: []
+    },
+    suspiciousAlertTimestamp: {
+      type: Date
+    },
+    suspiciousAlertsDetail: [
+      {
+        text: { type: String, required: true },
+        status: { type: String, enum: ['active', 'dismissed', 'resolved'], default: 'active' },
+        timestamp: { type: Date, default: Date.now },
+        dismissedBy: {
+          id: { type: String },
+          name: { type: String }
+        },
+        dismissedAt: { type: Date }
+      }
+    ]
   },
   { timestamps: true }
 );

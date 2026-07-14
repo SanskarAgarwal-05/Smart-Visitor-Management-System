@@ -13,7 +13,7 @@ const Settings = () => {
       try {
         const response = await api.get('/');
         if (response.data.includes('Server Running')) {
-          setServerStatus('Active (Port 5000)');
+          setServerStatus('Active');
           setDbStatus('Connected (MongoDB)');
         } else {
           setServerStatus('Offline');

@@ -159,4 +159,36 @@ const updateOwnProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerAdmin, loginAdmin, getAdminProfile, changeOwnPassword, updateOwnProfile };
+const getSettings = async (req, res) => {
+  try {
+    const admin = await Admin.findOne();
+    res.json({
+      success: true,
+      visitorTimeLimit: admin && admin.visitorTimeLimit ? admin.visitorTimeLimit : 4,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const updateSettings = async (req, res) => {
+  try {
+    const { visitorTimeLimit } = req.body;
+    if (visitorTimeLimit === undefined || isNaN(visitorTimeLimit) || visitorTimeLimit <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid visitor time limit value' });
+    }
+
+    // Update all users/admins so they all share the same settings configuration
+    await Admin.updateMany({}, { visitorTimeLimit });
+
+    res.json({
+      success: true,
+      message: 'Settings updated successfully',
+      visitorTimeLimit,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { registerAdmin, loginAdmin, getAdminProfile, changeOwnPassword, updateOwnProfile, getSettings, updateSettings };

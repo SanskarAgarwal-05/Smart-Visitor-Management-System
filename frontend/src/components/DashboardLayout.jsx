@@ -9,6 +9,7 @@ const DashboardLayout = ({ children }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [visitorTimeLimit, setVisitorTimeLimit] = useState(4);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,15 +59,74 @@ const DashboardLayout = ({ children }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch recent notifications (recent check-ins)
+  // Fetch recent notifications (recent check-ins & overstay alerts)
   useEffect(() => {
     const fetchRecentAlerts = async () => {
       try {
         const response = await api.get('/visitor');
         const list = response.data.visitors || [];
+        const limit = response.data.visitorTimeLimit || 4;
+        setVisitorTimeLimit(limit);
         
+        const isAdmin = currentUser?.role === 'admin' || localStorage.getItem('userRole') === 'admin';
+        
+        // Helper to format short alert messages for the notification bell
+        const getShortAlertMessage = (alertMsg, fullName) => {
+          if (alertMsg.includes('associated with multiple visitor identities') || alertMsg.includes('Duplicate Phone')) {
+            const lines = alertMsg.split('\n');
+            const names = lines
+              .filter(line => line.trim().startsWith('*') || line.trim().startsWith('-'))
+              .map(line => line.replace(/^[\s*-]+/, '').trim());
+
+            const others = names.filter(n => n.toLowerCase().trim() !== fullName.toLowerCase().trim());
+            let sharedWith = '';
+            if (others.length === 1) {
+              sharedWith = ` Shared with ${others[0]}.`;
+            } else if (others.length === 2) {
+              sharedWith = ` Shared with ${others[0]} and ${others[1]}.`;
+            } else if (others.length > 2) {
+              sharedWith = ` Shared with ${others.slice(0, -1).join(', ')} and ${others[others.length - 1]}.`;
+            }
+
+            return `Duplicate phone number detected for ${fullName}.${sharedWith}`;
+          } else if (alertMsg.includes('Multiple Rejections')) {
+            return `Multiple rejections detected for ${fullName}. Rejected 3 or more times within 24 hours.`;
+          } else if (alertMsg.includes('Multiple Visits')) {
+            return `Multiple visits detected for ${fullName}. Registered more than 5 times in 24 hours.`;
+          } else if (alertMsg.includes('Out of Hours')) {
+            return `Out of office hours registration for ${fullName}. Registered outside office hours.`;
+          }
+          return `${fullName}: ${alertMsg}`;
+        };
+
+        // Filter and map suspicious alerts (only for admin)
+        const suspiciousAlerts = isAdmin 
+          ? list.filter(v => v.isSuspicious).flatMap((v) => {
+              let timeStr = new Date(v.createdAt || v.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              return (v.suspiciousAlerts || []).map((alertMsg, idx) => ({
+                id: `suspicious-${v._id}-${idx}`,
+                message: getShortAlertMessage(alertMsg, v.fullName),
+                time: timeStr,
+                unread: true,
+                isSuspicious: true
+              }));
+            })
+          : [];
+
+        // Filter and map overstayed alerts
+        const overstayAlerts = list.filter(v => v.isOverstayed).map((v) => {
+          let timeStr = new Date(v.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return {
+            id: `overstay-${v._id}`,
+            message: `${v.fullName} has overstayed by ${v.overstayDuration}.`,
+            time: timeStr,
+            unread: true,
+            isOverstay: true
+          };
+        });
+
         // Filter and map to useful notifications only: Registered, Approved, Checked-Out
-        const alerts = list.slice(0, 8).map((v, idx) => {
+        const regularAlerts = list.slice(0, 8).map((v, idx) => {
           let msg = '';
           let timeStr = new Date(v.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           if (v.status === 'checked-out') {
@@ -82,10 +142,11 @@ const DashboardLayout = ({ children }) => {
             id: v._id || idx,
             message: msg,
             time: timeStr,
-            unread: true // Initialize as unread for demo/polling, can mark read locally
+            unread: true
           };
         });
-        setNotifications(alerts);
+
+        setNotifications([...suspiciousAlerts, ...overstayAlerts, ...regularAlerts]);
       } catch (err) {
         console.error('Failed to load notifications', err);
         setNotifications([
@@ -96,7 +157,8 @@ const DashboardLayout = ({ children }) => {
     };
 
     fetchRecentAlerts();
-    const interval = setInterval(fetchRecentAlerts, 50000);
+    // Refresh notifications every 10 seconds to detect overstays in real-time
+    const interval = setInterval(fetchRecentAlerts, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -292,6 +354,20 @@ const DashboardLayout = ({ children }) => {
                       </button>
                     )}
                   </div>
+                  {/* Visitor Time Limit Banner */}
+                  <div style={{ 
+                    padding: 'var(--space-2) var(--space-4)', 
+                    backgroundColor: 'var(--primary-light)', 
+                    borderBottom: '1px solid var(--border-secondary)', 
+                    fontSize: '0.8rem', 
+                    color: 'var(--primary)', 
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>🕒 Visitor Time Limit: {visitorTimeLimit} Hours</span>
+                  </div>
                   <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
                     {notifications.length === 0 ? (
                       <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -308,12 +384,19 @@ const DashboardLayout = ({ children }) => {
                             flexDirection: 'column', 
                             alignItems: 'flex-start',
                             fontWeight: n.unread ? '600' : 'normal',
-                            borderLeft: n.unread ? '3px solid var(--primary)' : 'none',
+                            borderLeft: n.unread 
+                              ? (n.isSuspicious ? '3px solid var(--accent-orange)' : (n.isOverstay ? '3px solid var(--color-danger)' : '3px solid var(--primary)')) 
+                              : 'none',
                             paddingLeft: n.unread ? '13px' : '16px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            backgroundColor: n.isSuspicious 
+                              ? 'rgba(245, 158, 11, 0.05)' 
+                              : (n.isOverstay ? 'rgba(239, 68, 68, 0.05)' : 'transparent')
                           }}
                         >
-                          <span style={{ fontSize: '0.825rem' }}>{n.message}</span>
+                          <span style={{ fontSize: '0.825rem', color: n.isSuspicious ? 'var(--accent-orange)' : (n.isOverstay ? 'var(--color-danger)' : 'inherit') }}>
+                            {n.isSuspicious || n.isOverstay ? `⚠️ ${n.message}` : n.message}
+                          </span>
                           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{n.time}</span>
                         </div>
                       ))

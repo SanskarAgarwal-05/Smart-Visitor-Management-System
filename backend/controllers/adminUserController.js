@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
+const Visitor = require('../models/Visitor');
 
 // 1. Get All Users
 const getAllUsers = async (req, res) => {
@@ -159,10 +160,178 @@ const deleteUser = async (req, res) => {
   }
 };
 
+// Helpers for Reports Generation
+const getSettingsThreshold = async () => {
+  const admin = await Admin.findOne();
+  return admin && admin.visitorTimeLimit ? admin.visitorTimeLimit : 4;
+};
+
+const escapeCSVValue = (val) => {
+  if (val === null || val === undefined) return '';
+  let str = '';
+  if (val instanceof Date) {
+    str = val.toISOString();
+  } else {
+    str = String(val);
+  }
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    str = '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+};
+
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return isNaN(d.getTime()) ? '' : d.toISOString();
+};
+
+const getFormattedDate = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}_${mm}_${dd}`;
+};
+
+const generateCSV = (visitors, thresholdHours) => {
+  const headers = [
+    'Visitor ID',
+    'Full Name',
+    'Phone Number',
+    'Email',
+    'Purpose Of Visit',
+    'Person To Meet',
+    'Status',
+    'Check In Time',
+    'Check Out Time',
+    'Registered By',
+    'Approved By',
+    'Rejected By',
+    'Checked In By',
+    'Checked Out By',
+    'Suspicious Status',
+    'Overstay Status',
+    'Created At'
+  ];
+  
+  let csvContent = headers.join(',') + '\n';
+  
+  for (const v of visitors) {
+    let isOverstayed = false;
+    if (v.status === 'approved' || v.status === 'checked-out') {
+      const checkIn = new Date(v.checkInTime || v.checkedInAt || v.createdAt);
+      const end = v.status === 'checked-out' && v.checkOutTime 
+        ? new Date(v.checkOutTime) 
+        : new Date();
+      const durationMs = end - checkIn;
+      const thresholdMs = thresholdHours * 60 * 60 * 1000;
+      if (durationMs > thresholdMs && v.status === 'approved') {
+        isOverstayed = true;
+      }
+    }
+
+    const row = [
+      escapeCSVValue(v.visitorId),
+      escapeCSVValue(v.fullName),
+      escapeCSVValue(v.phoneNumber),
+      escapeCSVValue(v.email),
+      escapeCSVValue(v.purposeOfVisit),
+      escapeCSVValue(v.personToMeet),
+      escapeCSVValue(v.status),
+      escapeCSVValue(formatDate(v.checkInTime)),
+      escapeCSVValue(formatDate(v.checkOutTime)),
+      escapeCSVValue(v.registeredBy?.name),
+      escapeCSVValue(v.approvedBy?.name),
+      escapeCSVValue(v.rejectedBy?.name),
+      escapeCSVValue(v.checkedInBy?.name),
+      escapeCSVValue(v.checkedOutBy?.name),
+      escapeCSVValue(v.isSuspicious ? 'Yes' : 'No'),
+      escapeCSVValue(isOverstayed ? 'Yes' : 'No'),
+      escapeCSVValue(formatDate(v.createdAt))
+    ];
+    csvContent += row.join(',') + '\n';
+  }
+  
+  return csvContent;
+};
+
+// 6. Export Daily Report
+const exportDailyReport = async (req, res) => {
+  try {
+    const thresholdHours = await getSettingsThreshold();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const visitors = await Visitor.find({
+      createdAt: { $gte: startOfToday, $lte: endOfToday }
+    }).sort({ createdAt: -1 });
+
+    const csvContent = generateCSV(visitors, thresholdHours);
+    const dateStr = getFormattedDate(new Date());
+    const filename = `daily_report_${dateStr}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 7. Export Weekly Report
+const exportWeeklyReport = async (req, res) => {
+  try {
+    const thresholdHours = await getSettingsThreshold();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const visitors = await Visitor.find({
+      createdAt: { $gte: sevenDaysAgo }
+    }).sort({ createdAt: -1 });
+
+    const csvContent = generateCSV(visitors, thresholdHours);
+    const dateStr = getFormattedDate(new Date());
+    const filename = `weekly_report_${dateStr}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 8. Export Historical Report
+const exportHistoricalReport = async (req, res) => {
+  try {
+    const thresholdHours = await getSettingsThreshold();
+    const visitors = await Visitor.find().sort({ createdAt: -1 });
+
+    const csvContent = generateCSV(visitors, thresholdHours);
+    const dateStr = getFormattedDate(new Date());
+    const filename = `historical_logs_${dateStr}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.status(200).send(csvContent);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   createUser,
   updateUser,
   updateUserPassword,
   deleteUser,
+  exportDailyReport,
+  exportWeeklyReport,
+  exportHistoricalReport,
 };

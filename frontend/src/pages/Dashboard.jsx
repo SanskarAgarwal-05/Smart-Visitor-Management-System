@@ -10,6 +10,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [visitorTimeLimit, setVisitorTimeLimit] = useState(4);
   const navigate = useNavigate();
 
   const fetchVisitors = async () => {
@@ -18,6 +19,7 @@ const Dashboard = () => {
       setError('');
       const response = await api.get('/visitor');
       setVisitors(response.data.visitors || []);
+      setVisitorTimeLimit(response.data.visitorTimeLimit || 4);
     } catch (err) {
       console.error(err);
       if (err.response?.status === 401) {
@@ -63,6 +65,8 @@ const Dashboard = () => {
       alert(err.response?.data?.message || 'Failed to update visitor status.');
     }
   };
+
+
 
   const handleSaveVisitor = (newVisitor) => {
     setShowAddModal(false);
@@ -169,9 +173,57 @@ const Dashboard = () => {
             Real-time facility check-in tracking and authorization control console.
           </p>
         </div>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          backgroundColor: 'var(--bg-card)', 
+          padding: 'var(--space-2) var(--space-4)', 
+          borderRadius: 'var(--radius-md)', 
+          border: '1px solid var(--border-primary)',
+          fontSize: '0.875rem',
+          fontWeight: 'var(--weight-bold)',
+          color: 'var(--text-primary)'
+        }}>
+          <span style={{ color: 'var(--primary)' }}>🕒</span> Visitor Time Limit: {visitorTimeLimit} Hours
+        </div>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
+
+      {/* Overstay Alerts Banner */}
+      {visitors.filter(v => v.isOverstayed).map(v => (
+        <div 
+          key={v._id}
+          className="alert alert-danger" 
+          style={{ 
+            marginBottom: 'var(--space-4)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            borderLeft: '4px solid var(--color-danger)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            color: 'var(--color-danger)',
+            padding: 'var(--space-3) var(--space-4)',
+            borderRadius: 'var(--radius-md)',
+            fontWeight: 'var(--weight-semibold)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>⚠️</span>
+            <span>Visitor <strong>{v.fullName}</strong> has overstayed by {v.overstayDuration}.</span>
+          </div>
+          {canVerify && (
+            <button 
+              className="btn btn-danger btn-sm"
+              onClick={() => handleCheckOut(v._id)}
+              style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+            >
+              Check Out
+            </button>
+          )}
+        </div>
+      ))}
 
       {/* KPI METRIC GRID */}
       <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
@@ -257,6 +309,35 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Suspicious Activity Alerts section (Admin only, displayed below statistics cards) */}
+      {currentUser?.role === 'admin' && visitors.filter(v => v.isSuspicious).length > 0 && (() => {
+        const suspiciousCount = visitors.filter(v => v.isSuspicious).length;
+        const alertMessage = `${suspiciousCount} visitors currently have suspicious activity flags.`;
+
+        return (
+          <div 
+            className="alert alert-danger" 
+            style={{ 
+              marginBottom: 'var(--space-4)', 
+              borderLeft: '4px solid var(--accent-orange)',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              color: 'var(--accent-orange)',
+              padding: 'var(--space-3) var(--space-4)',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 'var(--weight-semibold)',
+              textAlign: 'left',
+              fontSize: '0.875rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>⚠️</span>
+            <span>{alertMessage}</span>
+          </div>
+        );
+      })()}
 
       {/* BOTTOM LAYOUT GRID */}
       {!loading && (
