@@ -29,7 +29,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
 
-    // Allow requests with no origin (Postman, Thunder Client, etc.)
+    // Allow requests from tools like Thunder Client/Postman
     if (!origin) {
       return callback(null, true);
     }
@@ -38,14 +38,12 @@ app.use(cors({
       return callback(null, true);
     }
 
-    return callback(new Error("Not allowed by CORS"));
+    return callback(null, false);
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
-
-
-// Handle preflight requests
-app.options("*", cors());
 
 
 // =======================
@@ -74,7 +72,7 @@ app.get("/", (req, res) => {
 
 
 // =======================
-// ERROR HANDLER
+// GLOBAL ERROR HANDLER
 // =======================
 
 app.use((err, req, res, next) => {
