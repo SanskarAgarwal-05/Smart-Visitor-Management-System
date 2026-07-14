@@ -1,5 +1,7 @@
 const path = require("path");
 
+console.log("NEW SERVER FILE LOADED - CORS VERSION");
+
 require("dotenv").config({
   path: path.join(__dirname, ".env"),
 });
