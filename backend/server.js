@@ -5,6 +5,7 @@ require("dotenv").config({
 });
 
 console.log("ENV CHECK:", process.env.MONGODB_URI);
+console.log("CORS CHECK:", process.env.CORS_ORIGIN);
 
 const express = require("express");
 const cors = require("cors");
@@ -15,39 +16,95 @@ const visitorRoutes = require("./routes/visitorRoutes");
 
 const app = express();
 
-// Middleware
-const corsOrigin = process.env.CORS_ORIGIN || '*';
-app.use(cors({
-  origin: corsOrigin.includes(',') ? corsOrigin.split(',').map(o => o.trim()) : corsOrigin
-}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Routes
+// =======================
+// CORS CONFIGURATION
+// =======================
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://smart-visitor-management-system-psi.vercel.app"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+
+    // Allow requests with no origin (Postman, Thunder Client, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true
+}));
+
+
+// Handle preflight requests
+app.options("*", cors());
+
+
+// =======================
+// BODY PARSER
+// =======================
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
+
+// =======================
+// ROUTES
+// =======================
+
 app.use("/api/admin", adminRoutes);
 app.use("/api/visitor", visitorRoutes);
 
-// Test Route
+
+// =======================
+// TEST ROUTE
+// =======================
+
 app.get("/", (req, res) => {
   res.send("Server Running");
 });
 
-// Global Error Handler Middleware
+
+// =======================
+// ERROR HANDLER
+// =======================
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
+
   res.status(err.status || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
   });
 });
 
+
+// =======================
+// SERVER START
+// =======================
+
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("Server startup failed:", error);
+    process.exit(1);
+  }
 };
 
 startServer();
