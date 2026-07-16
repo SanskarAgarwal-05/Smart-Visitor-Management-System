@@ -6,6 +6,7 @@ import VisitorList from './pages/VisitorList';
 import Register from './pages/Register';
 import Roles from './pages/Roles';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import DashboardLayout from './components/DashboardLayout';
 
 // Protected Route wrapper that injects DashboardLayout
@@ -54,6 +55,10 @@ function App() {
         <Route 
           path="/profile" 
           element={<ProtectedLayoutRoute element={Profile} />} 
+        />
+        <Route 
+          path="/settings" 
+          element={<ProtectedLayoutRoute element={Settings} />} 
         />
 
         {/* Fallback redirects */}

@@ -72,6 +72,10 @@ app.get("/", (req, res) => {
   res.send("Server Running");
 });
 
+app.get("/api", (req, res) => {
+  res.send("Server Running");
+});
+
 
 // =======================
 // GLOBAL ERROR HANDLER

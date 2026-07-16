@@ -12,7 +12,7 @@ const formatDateForPopup = (dateStr) => {
   const year = date.getFullYear();
   let hours = date.getHours();
   const minutes = String(date.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'AM' : 'PM';
+  const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12;
   const strTime = String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
@@ -20,6 +20,19 @@ const formatDateForPopup = (dateStr) => {
 };
 
 const getAlertDetails = (alertMsg, visitor) => {
+  if (!alertMsg || !visitor?.isSuspicious) {
+    return {
+      type: 'Normal',
+      phone: visitor?.phoneNumber || 'N/A',
+      associated: [],
+      reason: 'N/A',
+      severity: 'None',
+      action: 'None',
+      message: 'None',
+      timestamp: visitor?.updatedAt || visitor?.createdAt
+    };
+  }
+
   if (alertMsg.includes('associated with multiple visitor identities') || alertMsg.includes('Duplicate Phone')) {
     const lines = alertMsg.split('\n');
     const names = lines
@@ -802,11 +815,11 @@ const VisitorList = () => {
               <button className="modal-close" onClick={() => setViewingVisitor(null)}>×</button>
             </div>
             <div className="modal-body" style={{ padding: 'var(--space-5) var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              {currentUser?.role === 'admin' && viewingVisitor.suspiciousAlertsDetail && viewingVisitor.suspiciousAlertsDetail.filter(a => a.status !== 'resolved').length > 0 && (
+              {currentUser?.role === 'admin' && (
                 <div style={{ 
-                  backgroundColor: 'rgba(245, 158, 11, 0.05)', 
-                  border: '1px solid var(--accent-orange)',
-                  borderLeft: '4px solid var(--accent-orange)',
+                  backgroundColor: viewingVisitor.isSuspicious ? 'rgba(245, 158, 11, 0.05)' : 'rgba(16, 185, 129, 0.05)', 
+                  border: viewingVisitor.isSuspicious ? '1px solid var(--accent-orange)' : '1px solid var(--color-success)',
+                  borderLeft: viewingVisitor.isSuspicious ? '4px solid var(--accent-orange)' : '4px solid var(--color-success)',
                   padding: 'var(--space-4)', 
                   borderRadius: 'var(--radius-md)',
                   color: 'var(--text-primary)',
@@ -816,91 +829,64 @@ const VisitorList = () => {
                   gap: 'var(--space-3)',
                   textAlign: 'left'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--accent-orange)', paddingBottom: '6px', fontWeight: 'var(--weight-bold)', color: 'var(--accent-orange)' }}>
-                    <span>⚠️ Suspicious Activity History</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-secondary)', paddingBottom: '6px', fontWeight: 'var(--weight-bold)', color: viewingVisitor.isSuspicious ? 'var(--accent-orange)' : 'var(--color-success)' }}>
+                    <span>🛡️ Security & Suspicious Check</span>
                   </div>
-                  {viewingVisitor.suspiciousAlertsDetail.filter(a => a.status !== 'resolved').map((alertItem, idx) => {
-                    const details = getAlertDetails(alertItem.text, viewingVisitor);
-                    const isDismissed = alertItem.status === 'dismissed';
-                    return (
-                      <div key={idx} style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        gap: '6px',
-                        padding: 'var(--space-2) 0',
-                        borderBottom: idx < viewingVisitor.suspiciousAlertsDetail.filter(a => a.status !== 'resolved').length - 1 ? '1px dashed rgba(245, 158, 11, 0.3)' : 'none'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: 'var(--weight-bold)', fontSize: '0.9rem', color: isDismissed ? 'var(--text-secondary)' : 'var(--accent-orange)' }}>
-                            {details.type} {isDismissed && '[DISMISSED]'}
-                          </span>
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            padding: '2px 8px', 
-                            borderRadius: '10px', 
-                            fontWeight: 'bold',
-                            backgroundColor: isDismissed ? 'var(--border-secondary)' : (details.severity === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'),
-                            color: isDismissed ? 'var(--text-secondary)' : (details.severity === 'High' ? 'var(--color-danger)' : 'var(--accent-orange)')
+                  
+                  <div>
+                    <strong>Status:</strong> <span style={{ color: viewingVisitor.isSuspicious ? 'var(--accent-orange)' : 'var(--color-success)', fontWeight: 'bold' }}>{viewingVisitor.isSuspicious ? 'Suspicious' : 'Normal'}</span>
+                  </div>
+                  <div>
+                    <strong>Reason:</strong> {viewingVisitor.isSuspicious 
+                      ? (viewingVisitor.suspiciousAlertsDetail?.filter(a => a.status === 'active').map(a => getAlertDetails(a.text, viewingVisitor).reason).join('; ') || 'N/A')
+                      : 'N/A'}
+                  </div>
+                  <div>
+                    <strong>Message:</strong> {viewingVisitor.isSuspicious 
+                      ? (viewingVisitor.suspiciousAlertsDetail?.filter(a => a.status === 'active').map(a => a.text).join('; ') || 'None')
+                      : 'None'}
+                  </div>
+
+                  {viewingVisitor.suspiciousAlertsDetail && viewingVisitor.suspiciousAlertsDetail.filter(a => a.status !== 'resolved').length > 0 && (
+                    <div style={{ borderTop: '1px dashed var(--border-secondary)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                      <span style={{ fontWeight: 'bold', color: 'var(--text-secondary)' }}>Alert Audit History:</span>
+                      {viewingVisitor.suspiciousAlertsDetail.filter(a => a.status !== 'resolved').map((alertItem, idx) => {
+                        const details = getAlertDetails(alertItem.text, viewingVisitor);
+                        const isDismissed = alertItem.status === 'dismissed';
+                        return (
+                          <div key={idx} style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '4px',
+                            padding: 'var(--space-2) 0',
+                            borderBottom: idx < viewingVisitor.suspiciousAlertsDetail.filter(a => a.status !== 'resolved').length - 1 ? '1px dashed var(--border-secondary)' : 'none'
                           }}>
-                            {isDismissed ? 'Dismissed' : `${details.severity} Severity`}
-                          </span>
-                        </div>
-                        
-                        <div>
-                          <strong>Phone Number:</strong> {details.phone || 'N/A'}
-                        </div>
-
-                        {details.associated.length > 0 && (
-                          <div style={{ marginTop: '2px' }}>
-                            <strong>Associated Visitors:</strong>
-                            <ul style={{ margin: '4px 0 0 16px', padding: 0, listStyleType: 'disc', fontSize: '0.8rem' }}>
-                              {details.associated.map((name, nIdx) => (
-                                <li key={nIdx}>{name}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        <div style={{ marginTop: '2px' }}>
-                          <strong>Reason:</strong> {details.reason}
-                        </div>
-
-                        {!isDismissed && (
-                          <div style={{ marginTop: '2px' }}>
-                            <strong>Recommended Action:</strong> <span style={{ color: 'var(--color-danger)', fontWeight: 'var(--weight-semibold)' }}>{details.action}</span>
-                          </div>
-                        )}
-
-                        {isDismissed && alertItem.dismissedBy && (
-                          <div style={{ 
-                            marginTop: '6px', 
-                            padding: 'var(--space-3)', 
-                            backgroundColor: 'var(--bg-app)', 
-                            border: '1px solid var(--border-primary)', 
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.8rem',
-                            color: 'var(--text-secondary)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '4px'
-                          }}>
-                            <div>
-                              <strong>Dismissed by:</strong>
-                              <div style={{ color: 'var(--text-primary)' }}>{alertItem.dismissedBy.name}</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontWeight: 'var(--weight-bold)', fontSize: '0.85rem', color: isDismissed ? 'var(--text-secondary)' : 'var(--accent-orange)' }}>
+                                {details.type} {isDismissed && '[DISMISSED]'}
+                              </span>
+                              <span style={{ 
+                                fontSize: '0.7rem', 
+                                padding: '1px 6px', 
+                                borderRadius: '10px', 
+                                fontWeight: 'bold',
+                                backgroundColor: isDismissed ? 'var(--border-secondary)' : (details.severity === 'High' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'),
+                                color: isDismissed ? 'var(--text-secondary)' : (details.severity === 'High' ? 'var(--color-danger)' : 'var(--accent-orange)')
+                              }}>
+                                {isDismissed ? 'Dismissed' : `${details.severity} Severity`}
+                              </span>
                             </div>
-                            <div>
-                              <strong>Dismissed At:</strong>
-                              <div style={{ color: 'var(--text-primary)' }}>{formatDateForPopup(alertItem.dismissedAt)}</div>
-                            </div>
+                            
+                            {isDismissed && alertItem.dismissedBy && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Dismissed by: {alertItem.dismissedBy.name} at {formatDateForPopup(alertItem.dismissedAt)}
+                              </div>
+                            )}
                           </div>
-                        )}
-
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                          Flagged at: {formatDateForPopup(alertItem.timestamp)}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 

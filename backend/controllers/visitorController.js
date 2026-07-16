@@ -57,10 +57,21 @@ const updateAlertsForVisitor = async (visitor, newAlertTexts) => {
 const syncSuspiciousAlertsForPhone = async (phoneNumber) => {
   if (!phoneNumber) return;
   const visitors = await Visitor.find({ phoneNumber });
-  const distinctNames = new Set(visitors.map(v => v.fullName.trim()));
   
-  if (distinctNames.size > 1) {
-    const namesList = [...distinctNames].map(name => `* ${name}`).join('\n');
+  const distinctNamesMap = new Map();
+  visitors.forEach(v => {
+    if (v.fullName) {
+      const trimmed = v.fullName.trim();
+      const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ');
+      if (!distinctNamesMap.has(normalized)) {
+        distinctNamesMap.set(normalized, trimmed);
+      }
+    }
+  });
+  const distinctNames = [...distinctNamesMap.values()];
+  
+  if (distinctNames.length > 1) {
+    const namesList = distinctNames.map(name => `* ${name}`).join('\n');
     const alertText = `Phone number ${phoneNumber} is associated with multiple visitor identities:\n${namesList}`;
     
     for (const v of visitors) {
@@ -381,6 +392,7 @@ const updateVisitor = async (req, res) => {
         visitor.approvedAt = now;
         visitor.checkedInBy = activeUser;
         visitor.checkedInAt = now;
+        visitor.checkInTime = now;
         visitor.status = 'approved';
       } else if (newStatus === 'rejected') {
         visitor.rejectedBy = activeUser;
