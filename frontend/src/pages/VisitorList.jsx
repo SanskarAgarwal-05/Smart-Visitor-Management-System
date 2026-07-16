@@ -837,12 +837,12 @@ const VisitorList = () => {
                     <strong>Status:</strong> <span style={{ color: viewingVisitor.isSuspicious ? 'var(--accent-orange)' : 'var(--color-success)', fontWeight: 'bold' }}>{viewingVisitor.isSuspicious ? 'Suspicious' : 'Normal'}</span>
                   </div>
                   <div>
-                    <strong>Reason:</strong> {viewingVisitor.isSuspicious 
+                    <strong>Suspicious Reason:</strong> {viewingVisitor.isSuspicious 
                       ? (viewingVisitor.suspiciousAlertsDetail?.filter(a => a.status === 'active').map(a => getAlertDetails(a.text, viewingVisitor).reason).join('; ') || 'N/A')
                       : 'N/A'}
                   </div>
                   <div>
-                    <strong>Message:</strong> {viewingVisitor.isSuspicious 
+                    <strong>Suspicious Message:</strong> {viewingVisitor.isSuspicious 
                       ? (viewingVisitor.suspiciousAlertsDetail?.filter(a => a.status === 'active').map(a => a.text).join('; ') || 'None')
                       : 'None'}
                   </div>

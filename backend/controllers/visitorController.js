@@ -90,6 +90,20 @@ const syncSuspiciousAlertsForPhone = async (phoneNumber) => {
   }
 };
 
+const getLocalHour = (date) => {
+  const tz = process.env.TZ || 'Asia/Kolkata';
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour: 'numeric',
+      hour12: false
+    });
+    return parseInt(formatter.format(date), 10);
+  } catch (e) {
+    return date.getHours();
+  }
+};
+
 const detectSuspiciousActivity = async (visitor, allVisitors = []) => {
   const alerts = [];
   const phone = visitor.phoneNumber;
@@ -131,9 +145,15 @@ const detectSuspiciousActivity = async (visitor, allVisitors = []) => {
   }
 
   // 4. Out of Hours Registration (outside 8 AM to 8 PM)
-  const hour = regTime.getHours();
+  const hour = getLocalHour(regTime);
   if (hour < 8 || hour >= 20) {
-    alerts.push(`Out of Hours Registration: Registered at ${regTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (Office hours: 8 AM - 8 PM)`);
+    const timeString = regTime.toLocaleTimeString('en-US', {
+      timeZone: process.env.TZ || 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    alerts.push(`Out of Hours Registration: Registered at ${timeString} (Office hours: 8 AM - 8 PM)`);
   }
 
   return alerts;
